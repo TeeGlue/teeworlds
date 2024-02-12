@@ -542,6 +542,20 @@ bool CNetConverter::DeepSnapConvert6(void *pItem, void *pSnapClass, int Type, in
 
             return true;
         };
+        case NETOBJTYPE_GAMEDATATEAM:
+        {
+            CNetObj_GameDataTeam *pObj7 = (CNetObj_GameDataTeam *)pItem;
+            protocol6::CNetObj_GameData *pObj6 = static_cast<protocol6::CNetObj_GameData *>(Server()->SnapNewItem(protocol6::NETOBJTYPE_GAMEDATA, ID, sizeof(protocol6::CNetObj_GameData)));
+
+            if (!pObj6)
+                return false;
+            pObj6->m_FlagCarrierRed = 0;
+            pObj6->m_FlagCarrierBlue = 0;
+            pObj6->m_TeamscoreRed = pObj7->m_TeamscoreRed;
+            pObj6->m_TeamscoreBlue = pObj7->m_TeamscoreBlue;
+
+            return true;
+        };
         case NETOBJTYPE_CHARACTER: // not game core, beacuse we don't need snap game core
         {
             CNetObj_Character *pObj7 = (CNetObj_Character *) pItem;
