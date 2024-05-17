@@ -830,6 +830,42 @@ void CServer::SendMap(int ClientID)
 	Msg.AddInt(MAP_CHUNK_SIZE);
 	Msg.AddRaw(&pInfo->m_MapSha256, sizeof(pInfo->m_MapSha256));
 	SendMsg(&Msg, MSGFLAG_VITAL|MSGFLAG_FLUSH, ClientID);
+	
+	m_aClients[ClientID].m_MapChunk = 0;
+}
+
+void CServer::SendMapData(int ClientID, int Chunk)
+{
+	CMapInfo *pInfo = &m_aMapInfos[m_aClients[ClientID].MapType()];
+
+	unsigned int ChunkSize = 1024 - 128;
+	unsigned int Offset = Chunk * ChunkSize;
+	int Last = 0;
+
+	// drop faulty map data requests
+	if(Chunk < 0 || Offset > pInfo->m_MapSize)
+		return;
+
+	if(Offset + ChunkSize >= pInfo->m_MapSize)
+	{
+		ChunkSize = pInfo->m_MapSize - Offset;
+		Last = 1;
+	}
+
+	CMsgPacker Msg(NETMSG_MAP_DATA, true);
+	Msg.AddInt(Last);
+	Msg.AddInt(pInfo->m_MapCrc);
+	Msg.AddInt(Chunk);
+	Msg.AddInt(ChunkSize);
+	Msg.AddRaw(&pInfo->m_pMapData[Offset], ChunkSize);
+	SendMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_FLUSH, ClientID);
+
+	if(Config()->m_Debug)
+	{
+		char aBuf[256];
+		str_format(aBuf, sizeof(aBuf), "sending chunk %d with size %d", Chunk, ChunkSize);
+		Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "server", aBuf);
+	}
 }
 
 void CServer::SendConnectionReady(int ClientID)
@@ -978,6 +1014,32 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 		{
 			if((pPacket->m_Flags&NET_CHUNKFLAG_VITAL) != 0 && (m_aClients[ClientID].m_State == CClient::STATE_CONNECTING || m_aClients[ClientID].m_State == CClient::STATE_CONNECTING_AS_SPEC))
 			{
+				if(ClientProtocol(ClientID) == NETPROTOCOL_SIX)
+				{
+					int Chunk = Unpacker.GetInt();
+					if(Unpacker.Error())
+					{
+						return;
+					}
+					if(Chunk != m_aClients[ClientID].m_MapChunk || !Config()->m_SvFastDownload)
+					{
+						SendMapData(ClientID, Chunk);
+						return;
+					}
+
+					if(Chunk == 0)
+					{
+						for(int i = 0; i < Config()->m_SvMapWindow; i++)
+						{
+							SendMapData(ClientID, i);
+						}
+					}
+					SendMapData(ClientID, Config()->m_SvMapWindow + m_aClients[ClientID].m_MapChunk);
+					m_aClients[ClientID].m_MapChunk++;
+
+					return;
+				}
+
 				int ChunkSize = (m_aClients[ClientID].m_Protocol == NETPROTOCOL_SIX) ? 1024 - 128 : MAP_CHUNK_SIZE;
 
 				// send map chunks
