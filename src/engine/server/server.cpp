@@ -838,8 +838,8 @@ void CServer::SendMapData(int ClientID, int Chunk)
 {
 	CMapInfo *pInfo = &m_aMapInfos[m_aClients[ClientID].MapType()];
 
-	unsigned int ChunkSize = 1024 - 128;
-	unsigned int Offset = Chunk * ChunkSize;
+	int ChunkSize = 1024 - 128;
+	int Offset = Chunk * ChunkSize;
 	int Last = 0;
 
 	// drop faulty map data requests
