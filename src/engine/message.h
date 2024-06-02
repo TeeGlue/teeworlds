@@ -41,6 +41,11 @@ class CMsgUnpacker : public CUnpacker
 public:
 	CMsgUnpacker(const void *pData, int Size)
 	{
+		ResetUnpack(pData, Size);
+	}
+
+	void ResetUnpack(const void *pData, int Size)
+	{
 		Reset(pData, Size);
 		const int Msg = GetInt();
 		if(Msg < 0)

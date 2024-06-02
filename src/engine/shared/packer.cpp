@@ -76,8 +76,14 @@ void CPacker::AddRaw(const void *pData, int Size)
 
 void CUnpacker::Reset(const void *pData, int Size)
 {
+	if(m_pData)
+		mem_free(m_pData);
+
+	m_pData = (unsigned char *) mem_alloc(Size);
+	mem_copy(m_pData, pData, Size);
+
 	m_Error = false;
-	m_pStart = (const unsigned char *)pData;
+	m_pStart = (const unsigned char *)m_pData;
 	m_pEnd = m_pStart + Size;
 	m_pCurrent = m_pStart;
 }

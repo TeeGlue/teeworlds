@@ -145,6 +145,16 @@ CNetConverter::CNetConverter(IServer *pServer, class CConfig *pConfig) :
     ResetSnapItemsEx();
 }
 
+static int PlayerFlags_SixToSeven(int Flags)
+{
+	int Seven = 0;
+	if(Flags & protocol6::PLAYERFLAG_CHATTING)
+		Seven |= PLAYERFLAG_CHATTING;
+	if(Flags & protocol6::PLAYERFLAG_SCOREBOARD)
+		Seven |= PLAYERFLAG_SCOREBOARD;
+	return Seven;
+}
+
 static inline int MsgFromSevenDown(int Msg, bool System)
 {
 	if(System)
@@ -166,6 +176,35 @@ bool CNetConverter::DeepConvertClientMsg6(CMsgUnpacker *pItem, int& Type, bool S
     if(System)
     {
         Type = MsgFromSevenDown(Type, System);
+        if(Type == NETMSG_INPUT)
+        {
+            int LastAckedSnapshot = pItem->GetInt();
+			int IntendedTick = pItem->GetInt();
+			int Size = pItem->GetInt();
+
+            if(pItem->Error() || Size / 4 > MAX_INPUT_SIZE)
+				return false;
+
+            int Data[MAX_INPUT_SIZE];
+			for(int i = 0; i < Size / 4; i++)
+				Data[i] = pItem->GetInt();
+
+            CNetObj_PlayerInput *pInput = (CNetObj_PlayerInput *) Data;
+            pInput->m_PlayerFlags = PlayerFlags_SixToSeven(pInput->m_PlayerFlags);
+
+            CMsgPacker Msg7(NETMSG_INPUT, true);
+            Msg7.AddInt(LastAckedSnapshot);
+            Msg7.AddInt(IntendedTick);
+            Msg7.AddInt(Size);
+
+            // pack it
+            for(int i = 0; i < Size / 4; i++)
+                Msg7.AddInt(Data[i]);
+
+            Msg7.AddInt(pItem->GetInt()); // PingCorrection
+
+            pItem->ResetUnpack(Msg7.Data(), Msg7.Size()); // copy
+        }
         return (Type != -1);
     }
 
@@ -198,7 +237,7 @@ bool CNetConverter::DeepConvertClientMsg6(CMsgUnpacker *pItem, int& Type, bool S
                 Msg7.AddString(aCommand, -1);
                 Msg7.AddString(str_skip_whitespaces_const(str_skip_to_whitespace_const(pCommandStr)), -1);
 
-                *pItem = CMsgUnpacker(Msg7.Data(), Msg7.Size());
+                pItem->ResetUnpack(Msg7.Data(), Msg7.Size());
                 Type = NETMSGTYPE_CL_COMMAND;
             }
             else
@@ -208,7 +247,7 @@ bool CNetConverter::DeepConvertClientMsg6(CMsgUnpacker *pItem, int& Type, bool S
                 Msg7.AddInt(-1);
                 Msg7.AddString(pMessage, -1);
 
-                *pItem = CMsgUnpacker(Msg7.Data(), Msg7.Size());
+                pItem->ResetUnpack(Msg7.Data(), Msg7.Size());
                 Type = NETMSGTYPE_CL_SAY;
             }
 
@@ -260,7 +299,7 @@ bool CNetConverter::DeepConvertClientMsg6(CMsgUnpacker *pItem, int& Type, bool S
                 CMsgPacker Msg7(NETMSGTYPE_CL_SETTEAM, false, false);
                 Msg7.AddInt(Team);
 
-                *pItem = CMsgUnpacker(Msg7.Data(), Msg7.Size());
+                pItem->ResetUnpack(Msg7.Data(), Msg7.Size());
                 Type = NETMSGTYPE_CL_SETTEAM;
             }
 
@@ -274,7 +313,7 @@ bool CNetConverter::DeepConvertClientMsg6(CMsgUnpacker *pItem, int& Type, bool S
             Msg7.AddInt(SpectatorID == -1 ? SPEC_FREEVIEW : SPEC_PLAYER);
             Msg7.AddInt(SpectatorID);
 
-            *pItem = CMsgUnpacker(Msg7.Data(), Msg7.Size());
+            pItem->ResetUnpack(Msg7.Data(), Msg7.Size());
             Type = NETMSGTYPE_CL_SETSPECTATORMODE;
 
             return true;
@@ -312,7 +351,7 @@ bool CNetConverter::DeepConvertClientMsg6(CMsgUnpacker *pItem, int& Type, bool S
 
             pPlayer->m_TeeInfos = TeeInfo;
             
-            *pItem = CMsgUnpacker(Msg7.Data(), Msg7.Size());
+            pItem->ResetUnpack(Msg7.Data(), Msg7.Size());
             Type = NETMSGTYPE_CL_STARTINFO;
 
             return true;
@@ -371,7 +410,7 @@ bool CNetConverter::DeepConvertClientMsg6(CMsgUnpacker *pItem, int& Type, bool S
 
             pPlayer->m_TeeInfos = TeeInfo;
             
-            *pItem = CMsgUnpacker(Msg7.Data(), Msg7.Size());
+            pItem->ResetUnpack(Msg7.Data(), Msg7.Size());
             Type = NETMSGTYPE_CL_SKINCHANGE;
 
             return true;
@@ -380,7 +419,7 @@ bool CNetConverter::DeepConvertClientMsg6(CMsgUnpacker *pItem, int& Type, bool S
         {
             CMsgPacker Msg7(NETMSGTYPE_CL_KILL, false, false);
 
-            *pItem = CMsgUnpacker(Msg7.Data(), Msg7.Size());
+            pItem->ResetUnpack(Msg7.Data(), Msg7.Size());
             Type = NETMSGTYPE_CL_KILL;
 
             return true;
@@ -391,7 +430,7 @@ bool CNetConverter::DeepConvertClientMsg6(CMsgUnpacker *pItem, int& Type, bool S
             CMsgPacker Msg7(Msg_SixToSeven(Type), false, false);
             Msg7.AddInt(pItem->GetInt());
 
-            *pItem = CMsgUnpacker(Msg7.Data(), Msg7.Size());
+            pItem->ResetUnpack(Msg7.Data(), Msg7.Size());
             Type = Msg_SixToSeven(Type);
 
             return true;
@@ -404,7 +443,7 @@ bool CNetConverter::DeepConvertClientMsg6(CMsgUnpacker *pItem, int& Type, bool S
             Msg7.AddString(pItem->GetString(CUnpacker::SANITIZE_CC|CUnpacker::SKIP_START_WHITESPACES)); // Reason
             Msg7.AddInt(0); // Force
 
-            *pItem = CMsgUnpacker(Msg7.Data(), Msg7.Size());
+            pItem->ResetUnpack(Msg7.Data(), Msg7.Size());
             Type = NETMSGTYPE_CL_CALLVOTE;
 
             return true;

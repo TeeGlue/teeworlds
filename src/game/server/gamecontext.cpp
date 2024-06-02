@@ -9,8 +9,6 @@
 #include <engine/netconverter.h>
 
 #include <generated/server_data.h>
-#include <generated/protocol6.h>
-#include <generated/protocolglue.h>
 #include <game/collision.h>
 #include <game/gamecore.h>
 #include <game/version.h>
@@ -618,23 +616,9 @@ void CGameContext::OnTick()
 #endif
 }
 
-static int PlayerFlags_SixToSeven(int Flags)
-{
-	int Seven = 0;
-	if(Flags & protocol6::PLAYERFLAG_CHATTING)
-		Seven |= PLAYERFLAG_CHATTING;
-	if(Flags & protocol6::PLAYERFLAG_SCOREBOARD)
-		Seven |= PLAYERFLAG_SCOREBOARD;
-	return Seven;
-}
-
 // Server hooks
 void CGameContext::OnClientDirectInput(int ClientID, void *pInput)
 {
-	auto *pPlayerInput = (CNetObj_PlayerInput *)pInput;
-	if(Server()->ClientProtocol(ClientID) == NETPROTOCOL_SIX)
-		pPlayerInput->m_PlayerFlags = PlayerFlags_SixToSeven(pPlayerInput->m_PlayerFlags);
-
 	int NumFailures = m_NetObjHandler.NumObjFailures();
 	if(m_NetObjHandler.ValidateObj(NETOBJTYPE_PLAYERINPUT, pInput, sizeof(CNetObj_PlayerInput)) == -1)
 	{
@@ -646,7 +630,7 @@ void CGameContext::OnClientDirectInput(int ClientID, void *pInput)
 		}
 	}
 	else
-		m_apPlayers[ClientID]->OnDirectInput(pPlayerInput);
+		m_apPlayers[ClientID]->OnDirectInput((CNetObj_PlayerInput *) pInput);
 }
 
 void CGameContext::OnClientPredictedInput(int ClientID, void *pInput)

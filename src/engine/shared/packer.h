@@ -33,6 +33,7 @@ public:
 
 class CUnpacker
 {
+	unsigned char *m_pData;
 	const unsigned char *m_pStart;
 	const unsigned char *m_pCurrent;
 	const unsigned char *m_pEnd;
@@ -41,6 +42,7 @@ protected:
 	bool m_Error;
 
 public:
+	CUnpacker() { m_pData = nullptr; }
 	enum
 	{
 		SANITIZE = 1,
