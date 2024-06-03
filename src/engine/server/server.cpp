@@ -2659,7 +2659,6 @@ int main(int argc, const char **argv)
 			pConsole->ParseArguments(argc-1, &argv[1]);
 	}
 	
-	// 826 = English
 	g_Localization.Init(pConfigManager->Values());
 	g_Localization.LoadIndexFile("./data/server_lang/index.json", pStorage, pConsole);
 

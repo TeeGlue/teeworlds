@@ -200,7 +200,7 @@ bool CLocalizationServerDatabase::LoadIndexFile(const char* pFilename, IStorage 
 
 const char *CLocalizationServerDatabase::FindString(int Code, unsigned Hash, unsigned ContextHash)
 {
-	if(Code == -1 || Code == 826)
+	if(Code == -1)
 		return 0;
 
 	CString String;

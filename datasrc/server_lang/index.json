@@ -1,19 +1,19 @@
 {
 	"index": [
 		{
+			"file": "en",
+			"name": "English",
+			"code": -1
+		},
+		{
 			"file": "zh-CN",
 			"name": "简体中文",
-			"code": 156
+			"code": 1
 		},
 		{
 			"file": "zh-TW",
 			"name": "繁體中文",
-			"code": 158
-		},
-		{
-			"file": "en",
-			"name": "English",
-			"code": 826
+			"code": 2
 		}
 	]
 }

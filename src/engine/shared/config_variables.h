@@ -104,7 +104,6 @@ MACRO_CONFIG_INT(SvAutoDemoRecord, sv_auto_demo_record, 0, 0, 1, CFGFLAG_SAVE|CF
 MACRO_CONFIG_INT(SvAutoDemoMax, sv_auto_demo_max, 10, 0, 1000, CFGFLAG_SAVE|CFGFLAG_SERVER, "Maximum number of automatically recorded demos (0 = no limit)")
 MACRO_CONFIG_STR(SvMaplist, sv_maplist, 32, "all", CFGFLAG_SAVE|CFGFLAG_SERVER, "Maplist for authed clients (none, standard, all)")
 
-// 826 = English
 MACRO_CONFIG_STR(SvDefaultLanguage, sv_default_language, 16, "en", CFGFLAG_SAVE|CFGFLAG_SERVER, "server default language")
 MACRO_CONFIG_INT(SvDDNetSnap, sv_ddnet_snap, 1, 0, 1, CFGFLAG_SAVE|CFGFLAG_SERVER, "Use ddnet snap")
 
