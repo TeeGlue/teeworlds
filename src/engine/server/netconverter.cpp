@@ -615,7 +615,7 @@ bool CNetConverter::DeepSnapConvert6(void *pItem, int Type, int ID, int Size, in
 
             if(!pObj6)
                 return false;
-            pObj6->m_AmmoCount = pObj7->m_AmmoCount;
+            pObj6->m_AmmoCount = pObj7->m_Weapon == WEAPON_NINJA ? 0 : pObj7->m_AmmoCount;
             pObj6->m_Angle = pObj7->m_Angle;
             pObj6->m_Armor = pObj7->m_Armor;
             pObj6->m_AttackTick = pObj7->m_AttackTick;
@@ -791,18 +791,7 @@ void CNetConverter::RebuildSnapshot(class CSnapshotBuilder *pSnapshotBuilder, in
         return; // pass
 
     CSnapshotBuilder TempBuilder;
-    TempBuilder.Init();
-    for(int i = 0; i < pSnapshotBuilder->NumItems(); i ++)
-    {
-        CSnapshotItem *pItem = pSnapshotBuilder->GetItem(i);
-        int SnapID = pItem->ID();
-        int SnapType = pItem->Type();
-        int Size = i == pSnapshotBuilder->NumItems() - 1 ? pSnapshotBuilder->GetDataSize() - pSnapshotBuilder->GetOffest(i) : 
-            pSnapshotBuilder->GetOffest(i + 1) - pSnapshotBuilder->GetOffest(i);
-        Size -= sizeof(CSnapshotItem);
-
-        mem_copy(TempBuilder.NewItem(SnapType, SnapID, Size), pItem->Data(), Size);
-    }
+    mem_copy(&TempBuilder, pSnapshotBuilder, sizeof(CSnapshotBuilder));
 
     pSnapshotBuilder->Init();
     for(int i = 0; i < TempBuilder.NumItems(); i ++)
