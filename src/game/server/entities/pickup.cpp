@@ -140,12 +140,11 @@ void CPickup::Snap(int SnappingClient)
 	if(m_SpawnTick != -1 || NetworkClipped(SnappingClient))
 		return;
 
-	CNetObj_Pickup Pickup;
-
-	Pickup.m_X = round_to_int(m_Pos.x);
-	Pickup.m_Y = round_to_int(m_Pos.y);
-	Pickup.m_Type = m_Type;
-
-	if(!NetConverter()->SnapNewItemConvert(&Pickup, this, NETOBJTYPE_PICKUP, GetID(), sizeof(CNetObj_Pickup), SnappingClient))
+	CNetObj_Pickup *pP = static_cast<CNetObj_Pickup *>(Server()->SnapNewItem(NETOBJTYPE_PICKUP, GetID(), sizeof(CNetObj_Pickup)));
+	if(!pP)
 		return;
+
+	pP->m_X = round_to_int(m_Pos.x);
+	pP->m_Y = round_to_int(m_Pos.y);
+	pP->m_Type = m_Type;
 }

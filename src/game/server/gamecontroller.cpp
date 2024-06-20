@@ -673,56 +673,54 @@ void IGameController::SwapTeamscore()
 // general
 void IGameController::Snap(int SnappingClient)
 {
-	CNetObj_GameData GameData;
+	CNetObj_GameData *pGameData = static_cast<CNetObj_GameData *>(Server()->SnapNewItem(NETOBJTYPE_GAMEDATA, 0, sizeof(CNetObj_GameData)));
+	if(!pGameData)
+		return;
 
-	GameData.m_GameStartTick = m_GameStartTick;
-	GameData.m_GameStateFlags = 0;
-	GameData.m_GameStateEndTick = 0; // no timer/infinite = 0, on end = GameEndTick, otherwise = GameStateEndTick
+	pGameData->m_GameStartTick = m_GameStartTick;
+	pGameData->m_GameStateFlags = 0;
+	pGameData->m_GameStateEndTick = 0; // no timer/infinite = 0, on end = GameEndTick, otherwise = GameStateEndTick
 	switch(m_GameState)
 	{
 	case IGS_WARMUP_GAME:
 	case IGS_WARMUP_USER:
-		GameData.m_GameStateFlags |= GAMESTATEFLAG_WARMUP;
+		pGameData->m_GameStateFlags |= GAMESTATEFLAG_WARMUP;
 		if(m_GameStateTimer != TIMER_INFINITE)
-			GameData.m_GameStateEndTick = Server()->Tick()+m_GameStateTimer;
+			pGameData->m_GameStateEndTick = Server()->Tick()+m_GameStateTimer;
 		break;
 	case IGS_START_COUNTDOWN:
-		GameData.m_GameStateFlags |= GAMESTATEFLAG_STARTCOUNTDOWN|GAMESTATEFLAG_PAUSED;
+		pGameData->m_GameStateFlags |= GAMESTATEFLAG_STARTCOUNTDOWN|GAMESTATEFLAG_PAUSED;
 		if(m_GameStateTimer != TIMER_INFINITE)
-			GameData.m_GameStateEndTick = Server()->Tick()+m_GameStateTimer;
+			pGameData->m_GameStateEndTick = Server()->Tick()+m_GameStateTimer;
 		break;
 	case IGS_GAME_PAUSED:
-		GameData.m_GameStateFlags |= GAMESTATEFLAG_PAUSED;
+		pGameData->m_GameStateFlags |= GAMESTATEFLAG_PAUSED;
 		if(m_GameStateTimer != TIMER_INFINITE)
-			GameData.m_GameStateEndTick = Server()->Tick()+m_GameStateTimer;
+			pGameData->m_GameStateEndTick = Server()->Tick()+m_GameStateTimer;
 		break;
 	case IGS_END_ROUND:
-		GameData.m_GameStateFlags |= GAMESTATEFLAG_ROUNDOVER;
-		GameData.m_GameStateEndTick = Server()->Tick()-m_GameStartTick-TIMER_END/2*Server()->TickSpeed()+m_GameStateTimer;
+		pGameData->m_GameStateFlags |= GAMESTATEFLAG_ROUNDOVER;
+		pGameData->m_GameStateEndTick = Server()->Tick()-m_GameStartTick-TIMER_END/2*Server()->TickSpeed()+m_GameStateTimer;
 		break;
 	case IGS_END_MATCH:
-		GameData.m_GameStateFlags |= GAMESTATEFLAG_GAMEOVER;
-		GameData.m_GameStateEndTick = Server()->Tick()-m_GameStartTick-TIMER_END*Server()->TickSpeed()+m_GameStateTimer;
+		pGameData->m_GameStateFlags |= GAMESTATEFLAG_GAMEOVER;
+		pGameData->m_GameStateEndTick = Server()->Tick()-m_GameStartTick-TIMER_END*Server()->TickSpeed()+m_GameStateTimer;
 		break;
 	case IGS_GAME_RUNNING:
 		// not effected
 		break;
 	}
 	if(m_SuddenDeath)
-		GameData.m_GameStateFlags |= GAMESTATEFLAG_SUDDENDEATH;
-
-	if(!NetConverter()->SnapNewItemConvert(&GameData, this, NETOBJTYPE_GAMEDATA, 0, sizeof(CNetObj_GameData), SnappingClient))
-		return;
+		pGameData->m_GameStateFlags |= GAMESTATEFLAG_SUDDENDEATH;
 
 	if(IsTeamplay())
 	{
-		CNetObj_GameDataTeam GameDataTeam;
-
-		GameDataTeam.m_TeamscoreRed = m_aTeamscore[TEAM_RED];
-		GameDataTeam.m_TeamscoreBlue = m_aTeamscore[TEAM_BLUE];
-
-		if(!NetConverter()->SnapNewItemConvert(&GameDataTeam, this, NETOBJTYPE_GAMEDATATEAM, 0, sizeof(CNetObj_GameDataTeam), SnappingClient))
+		CNetObj_GameDataTeam *pGameDataTeam = static_cast<CNetObj_GameDataTeam *>(Server()->SnapNewItem(NETOBJTYPE_GAMEDATATEAM, 0, sizeof(CNetObj_GameDataTeam)));
+		if(!pGameDataTeam)
 			return;
+
+		pGameDataTeam->m_TeamscoreRed = m_aTeamscore[TEAM_RED];
+		pGameDataTeam->m_TeamscoreBlue = m_aTeamscore[TEAM_BLUE];
 	}
 
 	// demo recording

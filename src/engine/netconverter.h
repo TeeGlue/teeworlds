@@ -16,7 +16,7 @@ class INetConverter : public IInterface
 {
 	MACRO_INTERFACE("netconverter", 0)
 public:
-	virtual bool SnapNewItemConvert(void *pItem, void *pSnapClass, int Type, int ID, int Size, int ToClientID) = 0;
+	virtual void RebuildSnapshot(class CSnapshotBuilder *pSnapshotBuilder, int ClientID) = 0;
 	virtual bool PrevConvertClientMsg(CMsgUnpacker *pItem, int& Type, bool System, int FromClientID) = 0;
 	virtual int SendMsgConvert(CMsgPacker *pMsg, int Flags, int ToClientID, int Depth = 0) = 0;
 	virtual int SendSystemMsgConvert(CMsgPacker *pMsg, int Flags, int ToClientID, int Depth = 0) = 0;

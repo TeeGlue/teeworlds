@@ -3,6 +3,7 @@
 
 #include <engine/shared/config.h>
 #include <engine/shared/protocol6.h>
+#include <engine/shared/snapshot.h>
 #include <engine/shared/uuid.h>
 
 #include <game/server/localization.h>
@@ -481,7 +482,7 @@ int CNetConverter::GetExSnapID(const char *pUuidStr)
     return MAX_DDNETSNAP_TYPE - Index;
 }
 
-bool CNetConverter::DeepSnapConvert6(void *pItem, void *pSnapClass, int Type, int ID, int Size, int ToClientID)
+bool CNetConverter::DeepSnapConvert6(void *pItem, int Type, int ID, int Size, int ToClientID)
 {
     // TODO: MOVE THESE TO THEIR FUNCTION
     // Type is 0.7, so we need switch check
@@ -523,7 +524,7 @@ bool CNetConverter::DeepSnapConvert6(void *pItem, void *pSnapClass, int Type, in
             
             if(!pObj6)
                 return false;
-            pObj6->m_GameFlags = ((IGameController *) pSnapClass)->GameFlags();
+            pObj6->m_GameFlags = m_GameFlags;
             pObj6->m_GameStateFlags = 0;
             if(pObj7->m_GameStateFlags&GAMESTATEFLAG_GAMEOVER || pObj7->m_GameStateFlags&GAMESTATEFLAG_ROUNDOVER)
                 pObj6->m_GameStateFlags |= protocol6::GAMESTATEFLAG_GAMEOVER;
@@ -543,7 +544,7 @@ bool CNetConverter::DeepSnapConvert6(void *pItem, void *pSnapClass, int Type, in
             pObj6->m_TimeLimit = Config()->m_SvTimelimit;
 
             pObj6->m_RoundNum = (str_length(Config()->m_SvMaprotation) && Config()->m_SvMatchesPerMap) ? Config()->m_SvMatchesPerMap : 0;
-            pObj6->m_RoundCurrent = ((IGameController *) pSnapClass)->MatchCount();
+            pObj6->m_RoundCurrent = GameServer()->m_pController->MatchCount();
 
             if(!Config()->m_SvDDNetSnap)
                 return true;
@@ -608,6 +609,10 @@ bool CNetConverter::DeepSnapConvert6(void *pItem, void *pSnapClass, int Type, in
             CNetObj_Character *pObj7 = (CNetObj_Character *) pItem;
             protocol6::CNetObj_Character *pObj6 = static_cast<protocol6::CNetObj_Character *>(Server()->SnapNewItem(protocol6::NETOBJTYPE_CHARACTER, ID, sizeof(protocol6::CNetObj_Character)));
             
+            int ClientID = ID;
+            if(!GameServer()->m_apPlayers[ClientID])
+                return false;
+
             if(!pObj6)
                 return false;
             pObj6->m_AmmoCount = pObj7->m_AmmoCount;
@@ -628,7 +633,7 @@ bool CNetConverter::DeepSnapConvert6(void *pItem, void *pSnapClass, int Type, in
             pObj6->m_HookY = pObj7->m_HookY;
 
             pObj6->m_Jumped = pObj7->m_Jumped;
-            pObj6->m_PlayerFlags = PlayerFlags_SevenToSix(((CCharacter *) pSnapClass)->GetPlayer()->m_PlayerFlags);
+            pObj6->m_PlayerFlags = PlayerFlags_SevenToSix(GameServer()->m_apPlayers[ClientID]->m_PlayerFlags);
             pObj6->m_Tick = pObj7->m_Tick;
             pObj6->m_VelX = pObj7->m_VelX;
             pObj6->m_VelY = pObj7->m_VelY;
@@ -639,7 +644,7 @@ bool CNetConverter::DeepSnapConvert6(void *pItem, void *pSnapClass, int Type, in
             if(!Config()->m_SvDDNetSnap)
                 return true;
 
-            CCharacter *pFrom = (CCharacter *) pSnapClass;
+            CCharacter *pFrom = GameServer()->GetPlayerChar(ClientID);
 
             // DDNet NETOBJTYPE_DDNETCHARACTER "character@netobj.ddnet.tw"
             protocol6::CNetObj_DDNetCharacter *pObjDDNet = static_cast<protocol6::CNetObj_DDNetCharacter *>(Server()->SnapNewItem(GetExSnapID("character@netobj.ddnet.tw"), ID, sizeof(protocol6::CNetObj_DDNetCharacter)));
@@ -681,8 +686,11 @@ bool CNetConverter::DeepSnapConvert6(void *pItem, void *pSnapClass, int Type, in
         {
             protocol6::CNetObj_ClientInfo *pClientInfo = static_cast<protocol6::CNetObj_ClientInfo *>(Server()->SnapNewItem(protocol6::NETOBJTYPE_CLIENTINFO, ID, sizeof(protocol6::CNetObj_ClientInfo)));
             
-            int ClientID = ((CPlayer *) pSnapClass)->GetCID();
-            CTeeInfo TeeInfos = ((CPlayer *) pSnapClass)->m_TeeInfos;
+            int ClientID = ID; // use id map next update.
+            if(!GameServer()->m_apPlayers[ClientID])
+                return false;
+
+            CTeeInfo TeeInfos = GameServer()->m_apPlayers[ClientID]->m_TeeInfos;
 
             if(!pClientInfo)
                 return false;
@@ -704,7 +712,7 @@ bool CNetConverter::DeepSnapConvert6(void *pItem, void *pSnapClass, int Type, in
             pObj6->m_Latency = pObj7->m_Latency;
             pObj6->m_Local = (ClientID == ToClientID) ? 1 : 0;
             pObj6->m_Score = pObj7->m_Score;
-            pObj6->m_Team = ((CPlayer *) pSnapClass)->m_DeadSpecMode ? protocol6::TEAM_SPECTATORS : ((CPlayer *) pSnapClass)->GetTeam();
+            pObj6->m_Team = GameServer()->m_apPlayers[ClientID]->m_DeadSpecMode ? protocol6::TEAM_SPECTATORS : GameServer()->m_apPlayers[ClientID]->GetTeam();
 
             if(!Config()->m_SvDDNetSnap)
                 return true;
@@ -756,7 +764,7 @@ bool CNetConverter::DeepSnapConvert6(void *pItem, void *pSnapClass, int Type, in
     return false;
 }
 
-bool CNetConverter::SnapNewItemConvert(void *pItem, void *pSnapClass, int Type, int ID, int Size, int ToClientID)
+bool CNetConverter::SnapItemConvert(void *pItem, int Type, int ID, int Size, int ToClientID)
 {
     m_GameFlags = GameServer()->m_pController->GameFlags();
     
@@ -771,10 +779,43 @@ bool CNetConverter::SnapNewItemConvert(void *pItem, void *pSnapClass, int Type, 
 
     if(Server()->ClientProtocol(ToClientID) == NETPROTOCOL_SIX)
     {
-        return DeepSnapConvert6(pItem, pSnapClass, Type, ID, Size, ToClientID);
+        return DeepSnapConvert6(pItem, Type, ID, Size, ToClientID);
     }
 
     return true;
+}
+
+void CNetConverter::RebuildSnapshot(class CSnapshotBuilder *pSnapshotBuilder, int ClientID)
+{
+    if(Server()->ClientProtocol(ClientID) == NETPROTOCOL_SEVEN)
+        return; // pass
+
+    CSnapshotBuilder TempBuilder;
+    TempBuilder.Init();
+    for(int i = 0; i < pSnapshotBuilder->NumItems(); i ++)
+    {
+        CSnapshotItem *pItem = pSnapshotBuilder->GetItem(i);
+        int SnapID = pItem->ID();
+        int SnapType = pItem->Type();
+        int Size = i == pSnapshotBuilder->NumItems() - 1 ? pSnapshotBuilder->GetDataSize() - pSnapshotBuilder->GetOffest(i) : 
+            pSnapshotBuilder->GetOffest(i + 1) - pSnapshotBuilder->GetOffest(i);
+        Size -= sizeof(CSnapshotItem);
+
+        mem_copy(TempBuilder.NewItem(SnapType, SnapID, Size), pItem->Data(), Size);
+    }
+
+    pSnapshotBuilder->Init();
+    for(int i = 0; i < TempBuilder.NumItems(); i ++)
+    {
+        CSnapshotItem *pItem = TempBuilder.GetItem(i);
+        int SnapID = pItem->ID();
+        int SnapType = pItem->Type();
+        int Size = i == TempBuilder.NumItems() - 1 ? TempBuilder.GetDataSize() - TempBuilder.GetOffest(i) : 
+            TempBuilder.GetOffest(i + 1) - TempBuilder.GetOffest(i);
+        Size -= sizeof(CSnapshotItem);
+
+        SnapItemConvert(pItem->Data(), SnapType, SnapID, Size, ClientID);
+    }
 }
 
 int CNetConverter::DeepMsgConvert6(CMsgPacker *pMsg, int Flags, int ToClientID)

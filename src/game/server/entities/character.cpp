@@ -822,21 +822,22 @@ void CCharacter::Snap(int SnappingClient)
 	if(NetworkClipped(SnappingClient))
 		return;
 
-	CCharacterCore *pCore;
-	int Tick;
+	CNetObj_Character *pCharacter = static_cast<CNetObj_Character *>(Server()->SnapNewItem(NETOBJTYPE_CHARACTER, m_pPlayer->GetCID(), sizeof(CNetObj_Character)));
+	if(!pCharacter)
+		return;
 
 	// write down the m_Core
 	if(!m_ReckoningTick || GameWorld()->m_Paused)
 	{
 		// no dead reckoning when paused because the client doesn't know
 		// how far to perform the reckoning
-		Tick = 0;
-		pCore = &m_Core;
+		pCharacter->m_Tick = 0;
+		m_Core.Write(pCharacter);
 	}
 	else
 	{
-		Tick = m_ReckoningTick;
-		pCore = &m_SendCore;
+		pCharacter->m_Tick = m_ReckoningTick;
+		m_SendCore.Write(pCharacter);
 	}
 
 	// set emote
@@ -845,42 +846,34 @@ void CCharacter::Snap(int SnappingClient)
 		SetEmote(EMOTE_NORMAL, -1);
 	}
 
-	CNetObj_Character Character;
+	pCharacter->m_Emote = m_EmoteType;
 
-	pCore->Write(&Character);
+	pCharacter->m_AmmoCount = 0;
+	pCharacter->m_Health = 0;
+	pCharacter->m_Armor = 0;
+	pCharacter->m_TriggeredEvents = m_TriggeredEvents;
 
-	Character.m_Tick = Tick;
-	Character.m_Emote = m_EmoteType;
+	pCharacter->m_Weapon = m_ActiveWeapon;
+	pCharacter->m_AttackTick = m_AttackTick;
 
-	Character.m_AmmoCount = 0;
-	Character.m_Health = 0;
-	Character.m_Armor = 0;
-	Character.m_TriggeredEvents = m_TriggeredEvents;
-
-	Character.m_Weapon = m_ActiveWeapon;
-	Character.m_AttackTick = m_AttackTick;
-
-	Character.m_Direction = m_Input.m_Direction;
+	pCharacter->m_Direction = m_Input.m_Direction;
 
 	if(m_pPlayer->GetCID() == SnappingClient || SnappingClient == -1 ||
 		(!Config()->m_SvStrictSpectateMode && m_pPlayer->GetCID() == GameServer()->m_apPlayers[SnappingClient]->GetSpectatorID()))
 	{
-		Character.m_Health = m_Health;
-		Character.m_Armor = m_Armor;
+		pCharacter->m_Health = m_Health;
+		pCharacter->m_Armor = m_Armor;
 		if(m_ActiveWeapon == WEAPON_NINJA)
-			Character.m_AmmoCount = m_Ninja.m_ActivationTick + g_pData->m_Weapons.m_Ninja.m_Duration * Server()->TickSpeed() / 1000;
+			pCharacter->m_AmmoCount = m_Ninja.m_ActivationTick + g_pData->m_Weapons.m_Ninja.m_Duration * Server()->TickSpeed() / 1000;
 		else if(m_aWeapons[m_ActiveWeapon].m_Ammo > 0)
-			Character.m_AmmoCount = m_aWeapons[m_ActiveWeapon].m_Ammo;
+			pCharacter->m_AmmoCount = m_aWeapons[m_ActiveWeapon].m_Ammo;
 	}
 
-	if(Character.m_Emote == EMOTE_NORMAL)
+	if(pCharacter->m_Emote == EMOTE_NORMAL)
 	{
 		if(5 * Server()->TickSpeed() - ((Server()->Tick() - m_LastAction) % (5 * Server()->TickSpeed())) < 5)
-			Character.m_Emote = EMOTE_BLINK;
+			pCharacter->m_Emote = EMOTE_BLINK;
 	}
-	
-	if(!NetConverter()->SnapNewItemConvert(&Character, this, NETOBJTYPE_CHARACTER, m_pPlayer->GetCID(), sizeof(CNetObj_Character), SnappingClient))
-		return;
 }
 
 void CCharacter::PostSnap()

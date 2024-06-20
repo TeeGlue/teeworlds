@@ -10,6 +10,7 @@
 class CSnapshotItem
 {
 	friend class CSnapshotBuilder;
+	friend class CNetConverter;
 	int m_TypeAndID;
 
 	int *Data() { return (int *)(this+1); }
@@ -147,6 +148,10 @@ public:
 	int *GetItemData(int Key) const;
 
 	int Finish(void *pSnapdata);
+
+	int GetOffest(int Index) const { return m_aOffsets[Index];}
+	int GetDataSize() const { return m_DataSize; }
+	int NumItems() const { return m_NumItems; }
 };
 
 

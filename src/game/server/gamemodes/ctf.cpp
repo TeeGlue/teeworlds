@@ -119,41 +119,40 @@ void CGameControllerCTF::Snap(int SnappingClient)
 {
 	IGameController::Snap(SnappingClient);
 
-	CNetObj_GameDataFlag GameDataFlag;
+	CNetObj_GameDataFlag *pGameDataFlag = static_cast<CNetObj_GameDataFlag *>(Server()->SnapNewItem(NETOBJTYPE_GAMEDATAFLAG, 0, sizeof(CNetObj_GameDataFlag)));
+	if(!pGameDataFlag)
+		return;
 
-	GameDataFlag.m_FlagDropTickRed = 0;
+	pGameDataFlag->m_FlagDropTickRed = 0;
 	if(m_apFlags[TEAM_RED])
 	{
 		if(m_apFlags[TEAM_RED]->IsAtStand())
-			GameDataFlag.m_FlagCarrierRed = FLAG_ATSTAND;
+			pGameDataFlag->m_FlagCarrierRed = FLAG_ATSTAND;
 		else if(m_apFlags[TEAM_RED]->GetCarrier() && m_apFlags[TEAM_RED]->GetCarrier()->GetPlayer())
-			GameDataFlag.m_FlagCarrierRed = m_apFlags[TEAM_RED]->GetCarrier()->GetPlayer()->GetCID();
+			pGameDataFlag->m_FlagCarrierRed = m_apFlags[TEAM_RED]->GetCarrier()->GetPlayer()->GetCID();
 		else
 		{
-			GameDataFlag.m_FlagCarrierRed = FLAG_TAKEN;
-			GameDataFlag.m_FlagDropTickRed = m_apFlags[TEAM_RED]->GetDropTick();
+			pGameDataFlag->m_FlagCarrierRed = FLAG_TAKEN;
+			pGameDataFlag->m_FlagDropTickRed = m_apFlags[TEAM_RED]->GetDropTick();
 		}
 	}
 	else
-		GameDataFlag.m_FlagCarrierRed = FLAG_MISSING;
-	GameDataFlag.m_FlagDropTickBlue = 0;
+		pGameDataFlag->m_FlagCarrierRed = FLAG_MISSING;
+	pGameDataFlag->m_FlagDropTickBlue = 0;
 	if(m_apFlags[TEAM_BLUE])
 	{
 		if(m_apFlags[TEAM_BLUE]->IsAtStand())
-			GameDataFlag.m_FlagCarrierBlue = FLAG_ATSTAND;
+			pGameDataFlag->m_FlagCarrierBlue = FLAG_ATSTAND;
 		else if(m_apFlags[TEAM_BLUE]->GetCarrier() && m_apFlags[TEAM_BLUE]->GetCarrier()->GetPlayer())
-			GameDataFlag.m_FlagCarrierBlue = m_apFlags[TEAM_BLUE]->GetCarrier()->GetPlayer()->GetCID();
+			pGameDataFlag->m_FlagCarrierBlue = m_apFlags[TEAM_BLUE]->GetCarrier()->GetPlayer()->GetCID();
 		else
 		{
-			GameDataFlag.m_FlagCarrierBlue = FLAG_TAKEN;
-			GameDataFlag.m_FlagDropTickBlue = m_apFlags[TEAM_BLUE]->GetDropTick();
+			pGameDataFlag->m_FlagCarrierBlue = FLAG_TAKEN;
+			pGameDataFlag->m_FlagDropTickBlue = m_apFlags[TEAM_BLUE]->GetDropTick();
 		}
 	}
 	else
-		GameDataFlag.m_FlagCarrierBlue = FLAG_MISSING;
-	
-	if(!NetConverter()->SnapNewItemConvert(&GameDataFlag, this, NETOBJTYPE_GAMEDATAFLAG, 0, sizeof(CNetObj_GameDataFlag), SnappingClient))
-		return;
+		pGameDataFlag->m_FlagCarrierBlue = FLAG_MISSING;
 }
 
 void CGameControllerCTF::Tick()

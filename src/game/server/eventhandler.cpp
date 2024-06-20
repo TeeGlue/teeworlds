@@ -51,10 +51,9 @@ void CEventHandler::Snap(int SnappingClient)
 			CNetEvent_Common *ev = (CNetEvent_Common *)&m_aData[m_aOffsets[i]];
 			if(SnappingClient == -1 || distance(GameServer()->m_apPlayers[SnappingClient]->m_ViewPos, vec2(ev->m_X, ev->m_Y)) < 1500.0f)
 			{
-				int Type = m_aTypes[i];
-				int Size = m_aSizes[i];
-				void *pData = &m_aData[m_aOffsets[i]];
-				GameServer()->NetConverter()->SnapNewItemConvert(pData, this, Type, i, Size, SnappingClient);
+				void *d = GameServer()->Server()->SnapNewItem(m_aTypes[i], i, m_aSizes[i]);
+				if(d)
+					mem_copy(d, &m_aData[m_aOffsets[i]], m_aSizes[i]);
 			}
 		}
 	}

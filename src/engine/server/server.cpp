@@ -652,6 +652,8 @@ void CServer::DoSnapshot()
 
 			GameServer()->OnSnap(i);
 
+			NetConverter()->RebuildSnapshot(&m_SnapshotBuilder, i);
+
 			// finish snapshot
 			SnapshotSize = m_SnapshotBuilder.Finish(pData);
 			Crc = pData->Crc();
