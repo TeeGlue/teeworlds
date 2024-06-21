@@ -1,3 +1,14 @@
+Tee's Glue
+==========
+
+Tee's Glue is a teeworlds server mod frame based on teeworlds latest version.
+
+Features
+--------
+1. 0.6 client is supported, but the client must support 64 players.
+2. Server localization system.
+3. DDNet register is support, but need build by `-DDDNETMASTER=ON`
+
 <a href="https://repology.org/metapackage/teeworlds/versions">
     <img src="https://repology.org/badge/vertical-allrepos/teeworlds.svg" alt="Packaging status" align="right">
 </a>
